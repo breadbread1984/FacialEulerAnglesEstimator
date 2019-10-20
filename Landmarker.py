@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 from os.path import join;
-from math import sqrt, atan2, sin, cos, asin;
+from math import sqrt, atan2, sin, cos, asin, pi;
 import numpy as np;
 import pickle;
 import cv2;
@@ -75,6 +75,11 @@ class Landmarker(object):
         pitch = atan2(2.0 * (q0 * q1 - q2 * q3), q0 * q0 - q1 * q1 - q2 * q2 + q3 * q3);
         roll = atan2(2.0 * (q0 * q3 - q1 * q2), q0 * q0 + q1 * q1 - q2 * q2 - q3 * q3);
         return (pitch, yaw, roll);
+    
+    def axisAngle2Euler(self, axis_angle):
+        
+        rotation_matrix, _ = cv2.Rodrigues(axis_angle);
+        return self.rotationMatrix2Euler(rotation_matrix);
 
     def eulerAngles(self, landmarks, img_size):
 
@@ -95,35 +100,56 @@ class Landmarker(object):
         intrinsic = np.array([[fx,0,cx],[0,fy,cy],[0,0,1]], dtype = np.float32);
         mapped_landmarks = np.array(landmarks, dtype = np.float32)[self.mapper - 1];
         succ, rvec, tvec, inliers = cv2.solvePnPRansac(objectPoints = self.world_pos, imagePoints = mapped_landmarks, cameraMatrix = intrinsic, distCoeffs = None, rvec = vec_rot, tvec = vec_trans, useExtrinsicGuess = True);
-        z_x = sqrt(tvec[0] * tvec[0] + tvec[2] * tvec[2]);
-        eul_x = atan2(tvec[1], z_x);
-        z_y = sqrt(tvec[1] * tvec[1] + tvec[2] * tvec[2]);
-        eul_y = -atan2(tvec[0], z_y);
-        camera_rotation = self.euler2RotationMatrix([eul_x, eul_y, 0]);
-        head_rotation = self.axisAngle2RotationMatrix(rvec);
-        corrected_rotation = camera_rotation * head_rotation;
-        euler_corrected = self.rotationMatrix2Euler(corrected_rotation);
-        return (tvec[0], tvec[1], tvec[2], euler_corrected[0], euler_corrected[1], euler_corrected[2]);
+        if False:
+            z_x = sqrt(tvec[0] * tvec[0] + tvec[2] * tvec[2]);
+            eul_x = atan2(tvec[1], z_x);
+            z_y = sqrt(tvec[1] * tvec[1] + tvec[2] * tvec[2]);
+            eul_y = -atan2(tvec[0], z_y);
+            camera_rotation = self.euler2RotationMatrix([eul_x, eul_y, 0]);
+            head_rotation = self.axisAngle2RotationMatrix(rvec);
+            corrected_rotation = camera_rotation * head_rotation;
+            euler_corrected = self.rotationMatrix2Euler(corrected_rotation);
+            return (tvec[0], tvec[1], tvec[2], euler_corrected[0], euler_corrected[1], euler_corrected[2]);
+        else:
+            euler = self.axisAngle2Euler(rvec);
+            return (tvec[0], tvec[1], tvec[2], pi - euler[0], euler[1], euler[2]);
 
 if __name__ == "__main__":
 
     import sys;
-    if len(sys.argv) != 2:
-        print('Usage: ' + sys.argv[0] + ' <image>');
-        exit(1);
-    img = cv2.imread(sys.argv[1]);
-    if img is None:
-        print('invalid image!');
-        exit(1);
     landmarker = Landmarker();
-    landmarks = landmarker.align(img);
-    for landmark in landmarks:
-        x, y, z, pitch, yaw, roll = landmarker.eulerAngles(landmark[1], img.shape[0:2]);
-        cv2.rectangle(img, tuple(landmark[0][0].astype('int32')), tuple(landmark[0][1].astype('int32')), (255,0,0), 2);
-        cv2.putText(img, "p:" + str(pitch) + " y:" + str(yaw) + " r:" + str(roll), tuple(landmark[0][0].astype('int32')), cv2.FONT_HERSHEY_SCRIPT_SIMPLEX, 2, (0,255,0), 3, 8);
-        for pts in landmark[1]:
-            pts = (int(pts[0]),int(pts[1]));
-            cv2.circle(img, pts, 2, (0, 255, 0), -1);
-    cv2.imshow('landmarks', img);
-    cv2.waitKey();
-
+    if len(sys.argv) == 2:
+        img = cv2.imread(sys.argv[1]);
+        if img is None:
+            print('invalid image!');
+            exit(1);
+        landmarks = landmarker.align(img);
+        for landmark in landmarks:
+            x, y, z, pitch, yaw, roll = landmarker.eulerAngles(landmark[1], (img.shape[1],img.shape[0]));
+            cv2.rectangle(img, tuple(landmark[0][0].astype('int32')), tuple(landmark[0][1].astype('int32')), (255,0,0), 2);
+            cv2.putText(img, "p:" + str(pitch) + "\ny:" + str(yaw) + "\nr:" + str(roll), tuple(landmark[0][0].astype('int32')), cv2.FONT_HERSHEY_SCRIPT_SIMPLEX, 2, (0,255,0), 3, 8);
+            for pts in landmark[1]:
+                pts = (int(pts[0]),int(pts[1]));
+                cv2.circle(img, pts, 2, (0, 255, 0), -1);
+        cv2.imshow('landmarks', img);
+        cv2.waitKey();
+    else:
+        cap = cv2.VideoCapture('test.mp4');
+        if cap.isOpened() == False:
+            print('invalid input video!');
+            exit(1);
+        while True:
+            ret, img = cap.read();
+            if False == ret: break;
+            landmarks = landmarker.align(img);
+            for landmark in landmarks:
+                x, y, z, pitch, yaw, roll = landmarker.eulerAngles(landmark[1], img.shape[0:2]);
+                cv2.rectangle(img, tuple(landmark[0][0].astype('int32')), tuple(landmark[0][1].astype('int32')), (255,0,0), 2);
+                print("pitch = " + str(pitch));
+                print("yaw = " + str(yaw));
+                print("roll = " + str(roll));
+                for pts in landmark[1]:
+                    pts = (int(pts[0]),int(pts[1]));
+                    cv2.circle(img, pts, 2, (0, 255, 0), -1);
+            cv2.imshow("landmarks", img);
+            cv2.waitKey(25);
