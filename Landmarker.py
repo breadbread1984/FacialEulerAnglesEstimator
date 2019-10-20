@@ -103,7 +103,7 @@ class Landmarker(object):
         head_rotation = self.axisAngle2RotationMatrix(rvec);
         corrected_rotation = camera_rotation * head_rotation;
         euler_corrected = self.rotationMatrix2Euler(corrected_rotation);
-        return (tvec[0], rvec[1], tvec[2], euler_corrected[0], euler_corrected[1], euler_corrected[2]);
+        return (tvec[0], tvec[1], tvec[2], euler_corrected[0], euler_corrected[1], euler_corrected[2]);
 
 if __name__ == "__main__":
 
@@ -118,7 +118,9 @@ if __name__ == "__main__":
     landmarker = Landmarker();
     landmarks = landmarker.align(img);
     for landmark in landmarks:
+        x, y, z, pitch, yaw, roll = landmarker.eulerAngles(landmark, img.shape[0:2]);
         cv2.rectangle(img, tuple(landmark[0][0].astype('int32')), tuple(landmark[0][1].astype('int32')), (255,0,0), 2);
+        cv2.putText(img, "p:" + str(pitch) + " y:" + str(yaw) + " r:" + str(roll), tuple(landmark[0][0].astype('int32')), cv2.FONT_HERSHEY_SCRIPT_SIMPLEX, 2, (0,255,0), 3, 8);
         for pts in landmark[1]:
             pts = (int(pts[0]),int(pts[1]));
             cv2.circle(img, pts, 2, (0, 255, 0), -1);
