@@ -99,7 +99,7 @@ class Landmarker(object):
         vec_rot = np.array([0,0,0], dtype = np.float32);
         intrinsic = np.array([[fx,0,cx],[0,fy,cy],[0,0,1]], dtype = np.float32);
         mapped_landmarks = np.array(landmarks, dtype = np.float32)[self.mapper - 1];
-        succ, rvec, tvec, inliers = cv2.solvePnPRansac(objectPoints = self.world_pos, imagePoints = mapped_landmarks, cameraMatrix = intrinsic, distCoeffs = None, rvec = vec_rot, tvec = vec_trans, useExtrinsicGuess = True);
+        succ, rvec, tvec = cv2.solvePnP(objectPoints = self.world_pos, imagePoints = mapped_landmarks, cameraMatrix = intrinsic, distCoeffs = None, rvec = vec_rot, tvec = vec_trans, useExtrinsicGuess = True);
         if False:
             z_x = sqrt(tvec[0] * tvec[0] + tvec[2] * tvec[2]);
             eul_x = atan2(tvec[1], z_x);
@@ -112,7 +112,7 @@ class Landmarker(object):
             return (tvec[0], tvec[1], tvec[2], euler_corrected[0], euler_corrected[1], euler_corrected[2]);
         else:
             euler = self.axisAngle2Euler(rvec);
-            return (tvec[0], tvec[1], tvec[2], pi - euler[0], euler[1], euler[2]);
+            return (tvec[0], tvec[1], tvec[2], euler[0], euler[1], euler[2]);
 
 if __name__ == "__main__":
 
