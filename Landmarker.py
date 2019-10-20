@@ -83,7 +83,7 @@ class Landmarker(object):
         cx = img_size[0] / 2.;
         cy = img_size[1] / 2.;
         fx = 500. * img_size[0] / 640.;
-        fy = 500. * img_shape[1] / 480.;
+        fy = 500. * img_size[1] / 480.;
         fx = (fx + fy) / 2.;
         fy = fx;
         # initial extrinsic estimate
@@ -93,7 +93,7 @@ class Landmarker(object):
         vec_trans = np.array([X,Y,Z]);
         vec_rot = np.array([0,0,0]);
         intrinsic = np.array([[fx,0,cx],[0,fy,cy],[0,0,1]], dtype = np.float32);
-        mapped_landmarks = np.array(landmarks)[self.mapper];
+        mapped_landmarks = np.array(landmarks)[self.mapper - 1];
         rvec, tvec, inliers = cv2.solvePnPRansac(objectPoints = self.world_pos, imagePoints = mapped_landmarks, cameraMatrix = intrinsic, distCoeffs = None, rvec = vec_rot, tvec = vec_trans, useExtrinsicGuess = True);
         z_x = sqrt(tvec[0] * tvec[0] + tvec[2] * tvec[2]);
         eul_x = atan2(tvec[1], z_x);
@@ -118,7 +118,7 @@ if __name__ == "__main__":
     landmarker = Landmarker();
     landmarks = landmarker.align(img);
     for landmark in landmarks:
-        x, y, z, pitch, yaw, roll = landmarker.eulerAngles(landmark, img.shape[0:2]);
+        x, y, z, pitch, yaw, roll = landmarker.eulerAngles(landmark[1], img.shape[0:2]);
         cv2.rectangle(img, tuple(landmark[0][0].astype('int32')), tuple(landmark[0][1].astype('int32')), (255,0,0), 2);
         cv2.putText(img, "p:" + str(pitch) + " y:" + str(yaw) + " r:" + str(roll), tuple(landmark[0][0].astype('int32')), cv2.FONT_HERSHEY_SCRIPT_SIMPLEX, 2, (0,255,0), 3, 8);
         for pts in landmark[1]:
