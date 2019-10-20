@@ -58,7 +58,7 @@ class Landmarker(object):
 
     def axisAngle2RotationMatrix(self, axis_angle):
 
-        rotation_matrix = cv2.Rodrigues(axis_angle);
+        rotation_matrix, _ = cv2.Rodrigues(axis_angle);
         return rotation_matrix;
 
     def rotationMatrix2Euler(self, rotation_matrix):
